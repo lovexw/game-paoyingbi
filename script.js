@@ -64,6 +64,7 @@ class CoinFlipGame {
         document.getElementById('clearHistoryBtn').addEventListener('click', () => this.clearHistory());
 
         document.getElementById('continuousBetAmount').addEventListener('input', () => this.updateMaxRounds());
+        document.getElementById('continuousRounds').addEventListener('input', () => this.updateSpeedModeVisibility());
         document.getElementById('betAmount').addEventListener('input', (e) => {
             const value = parseInt(e.target.value);
             if (value % 100 !== 0) {
@@ -114,6 +115,18 @@ class CoinFlipGame {
         const maxRounds = Math.floor(this.balance / (betAmount + fee));
         document.getElementById('maxRounds').textContent = maxRounds;
         document.getElementById('continuousRounds').max = maxRounds;
+        this.updateSpeedModeVisibility();
+    }
+
+    updateSpeedModeVisibility() {
+        const rounds = parseInt(document.getElementById('continuousRounds').value) || 5;
+        const speedModeControl = document.getElementById('speedModeControl');
+        if (rounds > 10) {
+            speedModeControl.style.display = 'block';
+        } else {
+            speedModeControl.style.display = 'none';
+            document.getElementById('speedModeToggle').checked = false;
+        }
     }
 
     trueRandom() {
@@ -199,14 +212,15 @@ class CoinFlipGame {
 
         const won = result === choice;
         let profit = 0;
+        const winAmount = betAmount * 2;
 
         if (won) {
-            profit = 200 - totalCost;
-            this.balance += 200;
-            this.showResult(`🎉 恭喜！你赢了 $${profit}`, 'win');
+            profit = winAmount - totalCost;
+            this.balance += winAmount;
+            this.showResult(`🎉 恭喜！你赢了: ${profit}`, 'win');
         } else {
             profit = -totalCost;
-            this.showResult(`😢 很遗憾，你输了 $${totalCost}`, 'lose');
+            this.showResult(`😢 很遗憾，你输了: ${totalCost}`, 'lose');
         }
 
         this.addHistory('real', result, choice, profit);
@@ -236,13 +250,16 @@ class CoinFlipGame {
             return;
         }
 
+        const speedMode = rounds > 10 && document.getElementById('speedModeToggle').checked;
+
         this.continuousMode = {
             active: true,
             currentRound: 0,
             totalRounds: rounds,
             choice: choice,
             betAmount: betAmount,
-            netProfit: 0
+            netProfit: 0,
+            speedMode: speedMode
         };
 
         this.isFlipping = true;
@@ -256,17 +273,20 @@ class CoinFlipGame {
             this.updateContinuousProgress();
 
             const result = this.trueRandom();
-            await this.flipCoin(result);
+            if (!speedMode) {
+                await this.flipCoin(result);
+            }
 
             this.realStats.rounds++;
             this.realStats[result]++;
 
             const won = result === choice;
             let profit = 0;
+            const winAmount = betAmount * 2;
 
             if (won) {
-                profit = 200 - totalCost;
-                this.balance += 200;
+                profit = winAmount - totalCost;
+                this.balance += winAmount;
             } else {
                 profit = -totalCost;
             }
@@ -277,15 +297,15 @@ class CoinFlipGame {
             this.updateContinuousProgress();
 
             if (i < rounds - 1) {
-                await this.delay(800);
+                await this.delay(speedMode ? 100 : 800);
             }
         }
 
         const finalProfit = this.continuousMode.netProfit;
         if (finalProfit > 0) {
-            this.showResult(`🎉 连续下注完成！净收益 $${finalProfit}`, 'win');
+            this.showResult(`🎉 连续下注完成！净收益: ${finalProfit}`, 'win');
         } else if (finalProfit < 0) {
-            this.showResult(`😢 连续下注完成！净亏损 $${Math.abs(finalProfit)}`, 'lose');
+            this.showResult(`😢 连续下注完成！净亏损: ${Math.abs(finalProfit)}`, 'lose');
         } else {
             this.showResult(`😐 连续下注完成！打平`, '');
         }
@@ -381,21 +401,25 @@ class CoinFlipGame {
             return;
         }
 
-        const recentHistory = this.history.slice(0, 20);
+        const recentHistory = this.history.slice(0, 50);
         historyList.innerHTML = recentHistory.map(item => {
+            const modeEmoji = item.mode === 'test' ? '🧪' : item.mode === 'continuous' ? '🔄' : '🎮';
             const modeText = item.mode === 'test' ? '测试' : item.mode === 'continuous' ? '连续' : '正式';
             const resultText = item.result === 'heads' ? '正面' : '反面';
+            const resultEmoji = item.result === 'heads' ? '🪙' : '⚫';
             const choiceText = item.choice ? (item.choice === 'heads' ? '正面' : '反面') : '-';
-            const profitText = item.profit !== null ? `$${item.profit}` : '-';
+            const profitText = item.profit !== null ? `${item.profit}` : '-';
             const resultClass = item.result;
             const profitClass = item.profit > 0 ? 'win' : item.profit < 0 ? 'lose' : '';
             
             return `
-                <div class="history-item">
-                    <span>${modeText}</span>
-                    <span class="history-result ${resultClass}">${resultText}</span>
-                    <span>${choiceText}</span>
-                    <span class="history-result ${profitClass}">${profitText}</span>
+                <div class="history-item ${profitClass}">
+                    <div style="font-size: 1.5rem; margin-bottom: 4px;">${modeEmoji}</div>
+                    <div style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 2px;">${modeText}</div>
+                    <div style="font-weight: bold; margin-bottom: 4px;">${resultEmoji}</div>
+                    <div style="font-size: 0.9rem; margin-bottom: 4px;"><span class="history-result ${resultClass}">${resultText}</span></div>
+                    <div style="font-size: 0.85rem; color: var(--text-secondary);">${choiceText}</div>
+                    <div style="font-size: 1rem; font-weight: bold; margin-top: 4px; color: ${item.profit > 0 ? 'var(--success)' : item.profit < 0 ? 'var(--danger)' : 'var(--text-primary)'};">${item.profit !== null ? `${item.profit}` : profitText}</div>
                 </div>
             `;
         }).join('');
