@@ -76,6 +76,20 @@ class CoinFlipGame {
                 e.target.value = Math.floor(value / 100) * 100;
             }
         });
+
+        document.getElementById('openDetailsBtn').addEventListener('click', () => this.openDataPanel());
+        document.getElementById('closeDetailsBtn').addEventListener('click', () => this.closeDataPanel());
+        document.getElementById('dataPanelOverlay').addEventListener('click', (e) => {
+            if (e.target.id === 'dataPanelOverlay') {
+                this.closeDataPanel();
+            }
+        });
+
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => this.switchTab(btn.dataset.tab));
+        });
+
+        document.getElementById('historyModeFilter').addEventListener('change', () => this.updateDetailedHistory());
     }
 
     switchMode(mode) {
@@ -385,6 +399,277 @@ class CoinFlipGame {
                 </div>
             `;
         }).join('');
+    }
+
+    openDataPanel() {
+        document.getElementById('dataPanelOverlay').classList.add('show');
+        this.updateDataPanel();
+    }
+
+    closeDataPanel() {
+        document.getElementById('dataPanelOverlay').classList.remove('show');
+    }
+
+    switchTab(tabName) {
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.tab === tabName);
+        });
+
+        document.querySelectorAll('.tab-pane').forEach(pane => {
+            pane.classList.toggle('active', pane.id === `${tabName}Tab`);
+        });
+
+        if (tabName === 'history') {
+            this.updateDetailedHistory();
+        } else if (tabName === 'analysis') {
+            this.updateAnalysis();
+        }
+    }
+
+    updateDataPanel() {
+        this.updateOverviewTab();
+        this.updateDetailedHistory();
+    }
+
+    updateOverviewTab() {
+        const totalRounds = this.testStats.rounds + this.realStats.rounds;
+        let totalProfit = 0;
+        let totalCost = 0;
+
+        for (const item of this.history) {
+            if (item.profit !== null) {
+                totalProfit += item.profit;
+                totalCost += Math.abs(item.profit > 0 ? item.profit : -item.profit);
+            }
+        }
+
+        document.getElementById('totalRoundsOverview').textContent = totalRounds;
+        document.getElementById('totalCostOverview').textContent = `$${totalCost.toLocaleString()}`;
+        
+        const profitDisplay = document.getElementById('totalProfitOverview');
+        profitDisplay.textContent = `$${totalProfit}`;
+        profitDisplay.style.color = totalProfit > 0 ? 'var(--success)' : totalProfit < 0 ? 'var(--danger)' : 'var(--primary)';
+
+        document.getElementById('balanceOverview').textContent = `$${this.balance.toLocaleString()}`;
+
+        document.getElementById('testModeRounds').textContent = this.testStats.rounds;
+        document.getElementById('testModeHeads').textContent = this.testStats.heads;
+        document.getElementById('testModeTails').textContent = this.testStats.tails;
+        const testRate = this.testStats.rounds > 0 ? ((this.testStats.heads / this.testStats.rounds) * 100).toFixed(1) : '50';
+        document.getElementById('testModeRate').textContent = `${testRate}%`;
+
+        document.getElementById('realModeRounds').textContent = this.realStats.rounds;
+        document.getElementById('realModeHeads').textContent = this.realStats.heads;
+        document.getElementById('realModeTails').textContent = this.realStats.tails;
+        const realRate = this.realStats.rounds > 0 ? ((this.realStats.heads / this.realStats.rounds) * 100).toFixed(1) : '50';
+        document.getElementById('realModeRate').textContent = `${realRate}%`;
+
+        const continuousHistory = this.history.filter(item => item.mode === 'continuous');
+        const continuousRounds = continuousHistory.length;
+        let continuousProfit = 0;
+        for (const item of continuousHistory) {
+            if (item.profit !== null) {
+                continuousProfit += item.profit;
+            }
+        }
+        document.getElementById('continuousModeRounds').textContent = continuousRounds;
+        const continuousProfitDisplay = document.getElementById('continuousModeProfit');
+        continuousProfitDisplay.textContent = `$${continuousProfit}`;
+        continuousProfitDisplay.style.color = continuousProfit > 0 ? 'var(--success)' : continuousProfit < 0 ? 'var(--danger)' : 'var(--text-secondary)';
+    }
+
+    updateDetailedHistory() {
+        const filter = document.getElementById('historyModeFilter').value;
+        let filteredHistory = this.history;
+
+        if (filter) {
+            filteredHistory = this.history.filter(item => item.mode === filter);
+        }
+
+        const historyContainer = document.getElementById('detailedHistory');
+        
+        if (filteredHistory.length === 0) {
+            historyContainer.innerHTML = '<div class="empty-state">暂无记录</div>';
+            return;
+        }
+
+        historyContainer.innerHTML = filteredHistory.map((item, index) => {
+            const modeText = item.mode === 'test' ? '🧪 测试' : item.mode === 'continuous' ? '🔄 连续' : '🎮 正式';
+            const resultText = item.result === 'heads' ? '正面' : '反面';
+            const choiceText = item.choice ? (item.choice === 'heads' ? '正面' : '反面') : '-';
+            const profitText = item.profit !== null ? `$${item.profit}` : '-';
+            const profitClass = item.profit > 0 ? 'win' : item.profit < 0 ? 'lose' : '';
+            const resultClass = item.result;
+            const time = new Date(item.timestamp).toLocaleTimeString();
+            const date = new Date(item.timestamp).toLocaleDateString();
+
+            return `
+                <div class="detailed-history-item ${profitClass}">
+                    <div class="history-cell">
+                        <div class="history-cell-label">模式</div>
+                        <div class="history-cell-value">${modeText}</div>
+                    </div>
+                    <div class="history-cell">
+                        <div class="history-cell-label">结果</div>
+                        <div class="history-cell-value ${resultClass}">${resultText}</div>
+                    </div>
+                    <div class="history-cell">
+                        <div class="history-cell-label">选择</div>
+                        <div class="history-cell-value">${choiceText}</div>
+                    </div>
+                    <div class="history-cell">
+                        <div class="history-cell-label">盈亏</div>
+                        <div class="history-cell-value ${profitClass}">${profitText}</div>
+                    </div>
+                    <div class="history-cell">
+                        <div class="history-cell-label">时间</div>
+                        <div class="history-cell-value history-cell-time">${date} ${time}</div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    updateAnalysis() {
+        this.updateWinLossAnalysis();
+        this.updateProfitAnalysis();
+        this.updateTrendAnalysis();
+    }
+
+    updateWinLossAnalysis() {
+        const realGames = this.history.filter(item => item.mode === 'real' || item.mode === 'continuous');
+        let wins = 0;
+        let losses = 0;
+
+        for (const item of realGames) {
+            if (item.profit > 0) {
+                wins++;
+            } else if (item.profit < 0) {
+                losses++;
+            }
+        }
+
+        const total = wins + losses;
+        const winRate = total > 0 ? ((wins / total) * 100).toFixed(1) : 0;
+
+        const container = document.getElementById('winLossAnalysis');
+        if (total === 0) {
+            container.innerHTML = '<div class="empty-state">暂无数据</div>';
+            return;
+        }
+
+        container.innerHTML = `
+            <div class="analysis-row">
+                <span class="analysis-label">赢局数</span>
+                <span class="analysis-value" style="color: var(--success)">${wins}</span>
+            </div>
+            <div class="analysis-row">
+                <span class="analysis-label">输局数</span>
+                <span class="analysis-value" style="color: var(--danger)">${losses}</span>
+            </div>
+            <div class="analysis-row">
+                <span class="analysis-label">总局数</span>
+                <span class="analysis-value">${total}</span>
+            </div>
+            <div class="analysis-row">
+                <span class="analysis-label">胜率</span>
+                <span class="analysis-value">${winRate}%</span>
+            </div>
+        `;
+    }
+
+    updateProfitAnalysis() {
+        let totalProfit = 0;
+        let maxProfit = -Infinity;
+        let maxLoss = 0;
+        let profitCount = 0;
+        let lossCount = 0;
+
+        for (const item of this.history) {
+            if (item.profit !== null) {
+                totalProfit += item.profit;
+                if (item.profit > 0) {
+                    profitCount++;
+                    maxProfit = Math.max(maxProfit, item.profit);
+                } else if (item.profit < 0) {
+                    lossCount++;
+                    maxLoss = Math.min(maxLoss, item.profit);
+                }
+            }
+        }
+
+        const container = document.getElementById('profitAnalysis');
+        if (this.history.length === 0) {
+            container.innerHTML = '<div class="empty-state">暂无数据</div>';
+            return;
+        }
+
+        const avgProfit = this.history.length > 0 ? (totalProfit / this.history.length).toFixed(2) : 0;
+
+        container.innerHTML = `
+            <div class="analysis-row">
+                <span class="analysis-label">总盈亏</span>
+                <span class="analysis-value" style="color: ${totalProfit > 0 ? 'var(--success)' : totalProfit < 0 ? 'var(--danger)' : 'var(--text-secondary)'}">${totalProfit > 0 ? '+' : ''}$${totalProfit}</span>
+            </div>
+            <div class="analysis-row">
+                <span class="analysis-label">平均收益</span>
+                <span class="analysis-value">${avgProfit > 0 ? '+' : ''}$${avgProfit}</span>
+            </div>
+            <div class="analysis-row">
+                <span class="analysis-label">单局最大利</span>
+                <span class="analysis-value" style="color: var(--success)">${maxProfit !== -Infinity ? `$${maxProfit}` : '-'}</span>
+            </div>
+            <div class="analysis-row">
+                <span class="analysis-label">单局最大亏</span>
+                <span class="analysis-value" style="color: var(--danger)">${maxLoss !== 0 ? `$${maxLoss}` : '-'}</span>
+            </div>
+        `;
+    }
+
+    updateTrendAnalysis() {
+        const realGames = this.history.filter(item => item.mode === 'real' || item.mode === 'continuous').reverse();
+        
+        let headCount = 0;
+        let tailCount = 0;
+
+        for (const item of realGames.slice(0, 20)) {
+            if (item.result === 'heads') {
+                headCount++;
+            } else {
+                tailCount++;
+            }
+        }
+
+        const recentTotal = headCount + tailCount;
+        const container = document.getElementById('trendAnalysis');
+
+        if (recentTotal === 0) {
+            container.innerHTML = '<div class="empty-state">暂无数据</div>';
+            return;
+        }
+
+        const headRate = ((headCount / recentTotal) * 100).toFixed(1);
+        const tailRate = ((tailCount / recentTotal) * 100).toFixed(1);
+
+        let trend = '均衡';
+        if (Math.abs(headCount - tailCount) > 4) {
+            trend = headCount > tailCount ? '倾向正面 📈' : '倾向反面 📉';
+        }
+
+        container.innerHTML = `
+            <div class="analysis-row">
+                <span class="analysis-label">最近20局正面</span>
+                <span class="analysis-value">${headCount} (${headRate}%)</span>
+            </div>
+            <div class="analysis-row">
+                <span class="analysis-label">最近20局反面</span>
+                <span class="analysis-value">${tailCount} (${tailRate}%)</span>
+            </div>
+            <div class="analysis-row">
+                <span class="analysis-label">趋势判断</span>
+                <span class="analysis-value">${trend}</span>
+            </div>
+        `;
     }
 
     disableChoiceButtons(selector) {
