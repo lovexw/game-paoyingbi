@@ -1,6 +1,6 @@
 class CoinFlipGame {
     constructor() {
-        this.balance = 10000;
+        this.balance = 1000;
         this.testStats = { rounds: 0, heads: 0, tails: 0 };
         this.realStats = { rounds: 0, heads: 0, tails: 0 };
         this.history = [];
@@ -28,7 +28,7 @@ class CoinFlipGame {
         const saved = localStorage.getItem('coinFlipGameData');
         if (saved) {
             const data = JSON.parse(saved);
-            this.balance = data.balance || 10000;
+            this.balance = data.balance || 1000;
             this.testStats = data.testStats || { rounds: 0, heads: 0, tails: 0 };
             this.realStats = data.realStats || { rounds: 0, heads: 0, tails: 0 };
             this.history = data.history || [];
@@ -121,7 +121,7 @@ class CoinFlipGame {
     updateSpeedModeVisibility() {
         const rounds = parseInt(document.getElementById('continuousRounds').value) || 5;
         const speedModeControl = document.getElementById('speedModeControl');
-        if (rounds > 10) {
+        if (rounds > 5) {
             speedModeControl.style.display = 'block';
         } else {
             speedModeControl.style.display = 'none';
@@ -250,7 +250,7 @@ class CoinFlipGame {
             return;
         }
 
-        const speedMode = rounds > 10 && document.getElementById('speedModeToggle').checked;
+        const speedMode = rounds > 5 && document.getElementById('speedModeToggle').checked;
 
         this.continuousMode = {
             active: true,
@@ -714,7 +714,7 @@ class CoinFlipGame {
 
     resetData() {
         if (confirm('确定要重置所有数据吗？这将清空余额、统计和历史记录。')) {
-            this.balance = 10000;
+            this.balance = 1000;
             this.testStats = { rounds: 0, heads: 0, tails: 0 };
             this.realStats = { rounds: 0, heads: 0, tails: 0 };
             this.history = [];
