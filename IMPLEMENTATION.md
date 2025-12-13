@@ -70,7 +70,7 @@ async startContinuous(choice) {
 
 ```javascript
 {
-    balance: 10000,                    // 余额
+    balance: 1000,                     // 余额
     testStats: {                       // 测试统计
         rounds: 0,
         heads: 0,
@@ -163,7 +163,7 @@ loadFromLocalStorage() {
     const saved = localStorage.getItem('coinFlipGameData');
     if (saved) {
         const data = JSON.parse(saved);
-        this.balance = data.balance || 10000;
+        this.balance = data.balance || 1000;
         this.testStats = data.testStats || { rounds: 0, heads: 0, tails: 0 };
         this.realStats = data.realStats || { rounds: 0, heads: 0, tails: 0 };
         this.history = data.history || [];
@@ -362,11 +362,11 @@ updateMaxRounds() {
 
 ✅ 动画效果的抛硬币游戏
 ✅ 真随机算法保证
-✅ 初始资金$10,000
+✅ 初始资金$1,000
 ✅ 下注规则完整实现
 ✅ 测试模式 (1-100局)
 ✅ 统计和概率展示
-✅ 连续下注功能
+✅ 连续下注功能 (超过5局可快速查看结果)
 ✅ 优雅大气的网页设计
 ✅ 丝滑的交互体验
 ✅ LocalStorage数据持久化
